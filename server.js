@@ -1,5 +1,7 @@
 const net = require('net')
 const fs = require('fs')
+const heroku = require('heroku')
+console.dir(heroku)
 
 try {
   // remove existing socket if exists
@@ -15,7 +17,9 @@ net
     console.log('server listening')
     socket.setEncoding('utf8')
     socket.on('data', data => {
+      heroku.run(['version'])
       console.log(`server received: ${data}`)
       socket.write(data.toUpperCase())
+      socket.end()
     })
   })

@@ -11,6 +11,9 @@ func read(r io.Reader) {
 	for {
 		n, err := r.Read(buf[:])
 		if err != nil {
+			if err == io.EOF {
+				return
+			}
 			log.Fatal("read error: ", err)
 		}
 		println("client got:", string(buf[0:n]))
@@ -29,7 +32,7 @@ func main() {
 		c.Write([]byte(msg))
 	}
 
-	send("hi there bud")
+	send("version")
 
 	read(c)
 }
