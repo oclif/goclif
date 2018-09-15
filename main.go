@@ -1,10 +1,22 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net"
+	"os"
 )
+
+var (
+	debugging = os.Getenv("DEBUG") != ""
+)
+
+func debugf(msg string, args ...interface{}) {
+	if debugging {
+		fmt.Printf(msg, args...)
+	}
+}
 
 func read(r io.Reader) {
 	buf := make([]byte, 1024)
@@ -16,7 +28,7 @@ func read(r io.Reader) {
 			}
 			log.Fatal("read error: ", err)
 		}
-		println("client got:", string(buf[0:n]))
+		debugf("client got: %#v\n", string(buf[0:n]))
 	}
 }
 
@@ -28,7 +40,7 @@ func main() {
 	defer c.Close()
 
 	send := func(msg string) {
-		println("client sent:", msg)
+		debugf("client sent: %#v\n", msg)
 		c.Write([]byte(msg))
 	}
 

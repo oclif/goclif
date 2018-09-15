@@ -1,6 +1,7 @@
 const net = require('net')
 const fs = require('fs')
 const heroku = require('heroku')
+const {inspect} = require('util')
 
 try {
   // remove existing socket if exists
@@ -13,19 +14,25 @@ stdout.write = process.stdout.write.bind(process.stdout)
 const stderr = msg => stderr.write(msg)
 stderr.write = process.stderr.write.bind(process.stderr)
 
+const debug = msg => stderr(msg + '\n')
+
 net
   .createServer()
   .listen('/tmp/foo.sock', () => {
-    console.log('server listening')
+    debug('server listening')
   })
   .on('connection', socket => {
-    console.log('server listening')
+    debug('socket connected')
     socket.setEncoding('utf8')
     socket.on('data', data => {
-      console.log(`server received: ${data}`)
+      debug(`server received: ${inspect(data)}`)
       const send = msg => {
-        stdout(`server sent: ${msg}`)
+        debug(`server sent: ${inspect(msg)}`)
         socket.write(msg)
+      }
+      const end = () => {
+        debug('server closing socket\n')
+        socket.end()
       }
       process.stdout.write = d => {
         send(d)
@@ -41,9 +48,9 @@ net
       .catch(err => {
         if (err.code === 'EEXIT') {
           send(`EEXIT: ${err.oclif.exit}`)
-          socket.end()
+          end()
         } else {
-          console.error(err)
+          stderr(err.message)
         }
       })
     })
