@@ -25,6 +25,7 @@ net
     debug('socket connected')
     socket.setEncoding('utf8')
     socket.on('data', data => {
+      data = JSON.parse(data)
       debug(`server received: ${inspect(data)}`)
       const send = msg => {
         debug(`server sent: ${inspect(msg)}`)
@@ -40,7 +41,7 @@ net
       process.stderr.write = d => {
         send(d)
       }
-      heroku.run([data])
+      heroku.run(data.argv)
       .then(() => {
         socket.write(data.toUpperCase())
         socket.end()

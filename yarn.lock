@@ -377,7 +377,7 @@
     supports-color "^5.4.0"
     tslib "^1"
 
-"@oclif/command@1.5.1", "@oclif/command@^1.5.0", "@oclif/command@^1.5.1":
+"@oclif/command@1.5.1", "@oclif/command@^1", "@oclif/command@^1.5.0", "@oclif/command@^1.5.1":
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/@oclif/command/-/command-1.5.1.tgz#dd2e1c1f8e55dad73036d4cab036ac3550ff8c24"
   dependencies:
@@ -386,7 +386,7 @@
     debug "^4.0.1"
     semver "^5.5.1"
 
-"@oclif/config@1.7.6", "@oclif/config@^1.7.6":
+"@oclif/config@1.7.6", "@oclif/config@^1", "@oclif/config@^1.7.6":
   version "1.7.6"
   resolved "https://registry.yarnpkg.com/@oclif/config/-/config-1.7.6.tgz#849e5f79591c8dd29d99dd3aba0914b50e2c2e74"
   dependencies:
@@ -402,6 +402,15 @@
     indent-string "^3.2.0"
     strip-ansi "^4.0.0"
     wrap-ansi "^4.0.0"
+
+"@oclif/example-multi-ts@^1.10.7":
+  version "1.10.7"
+  resolved "https://registry.yarnpkg.com/@oclif/example-multi-ts/-/example-multi-ts-1.10.7.tgz#2e1f4ba7623f8abded3eedb558d41dbde5d4733e"
+  dependencies:
+    "@oclif/command" "^1"
+    "@oclif/config" "^1"
+    "@oclif/plugin-help" "^2"
+    tslib "^1"
 
 "@oclif/linewrap@^1.0.0":
   version "1.0.0"
@@ -425,7 +434,7 @@
     lodash "^4.17.11"
     tslib "^1.9.3"
 
-"@oclif/plugin-help@2.1.2":
+"@oclif/plugin-help@2.1.2", "@oclif/plugin-help@^2":
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/@oclif/plugin-help/-/plugin-help-2.1.2.tgz#b6639e95157f563225a29b4329ce62e2e162afe9"
   dependencies:
