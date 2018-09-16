@@ -1,8 +1,11 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
+.PHONY: build
+build: dist/goclif
+
 .PHONY: test
-test: lint
+test: lint build
 	go test
 
 .PHONY: lint
@@ -20,15 +23,15 @@ $(PLATFORMS):
 .PHONY: release
 release: windows linux darwin
 
+server.js: server.ts
+	tsc server.ts
+
 bindata.go: server.js
 	go-bindata server.js
 
 dist/goclif: *.go
 	mkdir -p dist
 	go build -o dist/goclif
-
-.PHONY: build
-build: dist/goclif
 
 .PHONY: run
 run: build

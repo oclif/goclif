@@ -22,7 +22,7 @@ var (
 
 func debugf(msg string, args ...interface{}) {
 	if debugging {
-		fmt.Printf(msg, args...)
+		fmt.Printf("client "+msg, args...)
 	}
 }
 
@@ -34,7 +34,7 @@ func read(r io.Reader) {
 			return
 		}
 		must(err)
-		debugf("client got: %#v\n", string(buf[0:n]))
+		debugf("got: %#v\n", string(buf[0:n]))
 	}
 }
 
@@ -65,14 +65,14 @@ func startDaemon() string {
 }
 
 func main() {
-	startDaemon()
-	c, err := net.Dial("unix", "/tmp/foo.sock")
+	socket := startDaemon()
+	c, err := net.Dial("unix", socket)
 	must(err)
 	defer c.Close()
 
 	send := func(msg interface{}) {
 		output, err := json.Marshal(msg)
-		debugf("client sent: %s\n", string(output))
+		debugf("sent: %s\n", string(output))
 		must(err)
 		c.Write(output) // nolint: gosec
 	}

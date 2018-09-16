@@ -1,6 +1,10 @@
 {
   "dependencies": {
-    "@oclif/example-multi-ts": "^1.10.7",
     "heroku": "^7.16.0"
+  },
+  "devDependencies": {
+    "@oclif/tslint": "^3.1.0",
+    "tslint": "^5.11.0",
+    "typescript": "^3.1.0-rc.20180911"
   }
 }
