@@ -50,7 +50,7 @@ func main() {
 		output, err := json.Marshal(msg)
 		debugf("client sent: %s\n", string(output))
 		must(err)
-		c.Write(output)
+		c.Write(output) // nolint: gosec
 	}
 
 	send(commandMessage{
