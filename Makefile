@@ -32,4 +32,4 @@ build: dist/goclif
 
 .PHONY: run
 run: build
-	./dist/goclif $(ARGS)
+	DEBUG=1 ./dist/goclif $(ARGS)

@@ -6,6 +6,8 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
+	"strings"
 )
 
 type commandMessage struct {
@@ -41,7 +43,21 @@ func must(err error) {
 	}
 }
 
+func startDaemon() {
+	debugf("starting daemon\n")
+	cmd := exec.Command("node")
+	cmd.Stdin = strings.NewReader(MustAssetString("server.js"))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	must(cmd.Start())
+	debugf("started daemon\n")
+	go func() {
+		must(cmd.Wait())
+	}()
+}
+
 func main() {
+	startDaemon()
 	c, err := net.Dial("unix", "/tmp/foo.sock")
 	must(err)
 	defer c.Close()
