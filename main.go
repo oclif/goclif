@@ -64,7 +64,8 @@ func startDaemon() string {
 	return socket
 }
 
-func main() {
+// Run runs the CLI
+func Run(argv []string) {
 	socket := startDaemon()
 	c, err := net.Dial("unix", socket)
 	must(err)
@@ -74,13 +75,17 @@ func main() {
 		output, err := json.Marshal(msg)
 		debugf("sent: %s\n", string(output))
 		must(err)
-		c.Write(output) // nolint: gosec
+		c.Write(output)
 	}
 
 	send(commandMessage{
 		Type: "command",
-		Argv: []string{"version"},
+		Argv: argv,
 	})
 
 	read(c)
+}
+
+func main() {
+	Run(os.Args[1:])
 }

@@ -10,7 +10,7 @@ test: lint build
 
 .PHONY: lint
 lint: $(GOMETALINTER)
-	gometalinter --exclude bindata.go -D errcheck
+	gometalinter --exclude bindata.go -D gosec errcheck
 
 PLATFORMS := windows linux darwin
 os = $(word 1, $@)

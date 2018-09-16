@@ -6,6 +6,8 @@ import {inspect} from 'util'
 
 const socket = path.join(os.tmpdir(), 'goclif.sock')
 
+// sets up stdout/stderr which allow us to write the the real stdout
+// when running commands it will be mocked out
 const stdoutWrite = process.stdout.write
 const stderrWrite = process.stdout.write
 const stdout = (msg: string) => stdoutWrite.bind(process.stdout)(msg)
@@ -23,9 +25,12 @@ function pipeStream(stream: typeof process.stdout, fn: (d: string) => any) {
 
 const server = net.createServer()
 server.listen(socket, () => {
-  debug('listening')
+  debug(`listening: ${socket}`)
+
+  // send the path of the socket back to the go client
   stdout(socket + '\n')
 })
+
 server.on('connection', socket => {
   debug('socket connected')
   socket.on('data', data => {
@@ -41,10 +46,11 @@ server.on('connection', socket => {
     }
     pipeStream(process.stdout, send)
     pipeStream(process.stderr, send)
-    heroku.run(message.argv)
-      .then(() => {
-        socket.end()
-      })
+
+    // run the command
+    heroku
+      .run(message.argv)
+      .then(end)
       .catch(err => {
         if (err.code === 'EEXIT') {
           send(`EEXIT: ${err.oclif.exit}`)
@@ -64,4 +70,4 @@ server.on('close', () => {
 setTimeout(() => {
   debug('timed out')
   server.close()
-}, 10000)
+}, 5000)
