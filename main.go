@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -43,17 +44,24 @@ func must(err error) {
 	}
 }
 
-func startDaemon() {
+func startDaemon() string {
 	debugf("starting daemon\n")
 	cmd := exec.Command("node")
 	cmd.Stdin = strings.NewReader(MustAssetString("server.js"))
-	cmd.Stdout = os.Stdout
+	stdoutRaw, err := cmd.StdoutPipe()
+	must(err)
+	stdout := bufio.NewReader(stdoutRaw)
 	cmd.Stderr = os.Stderr
 	must(cmd.Start())
 	debugf("started daemon\n")
 	go func() {
 		must(cmd.Wait())
 	}()
+	socket, err := stdout.ReadString('\n')
+	socket = strings.TrimSpace(socket)
+	debugf("socket: %s\n", socket)
+	must(err)
+	return socket
 }
 
 func main() {
