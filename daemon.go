@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -47,18 +46,21 @@ func daemon() {
 			connections <- c
 		}
 	}()
-	handle := func(c net.Conn) {
-		decoder := json.NewDecoder(c)
-		var init MessageInit
-		must(decoder.Decode(&init))
-		socketBase := socketRun(init.ID)
-		must(err)
-		debugf("socket: %s\n", socketBase)
+	workers := []bool{}
+	startWorker := func() {
+		id := len(workers)
+		debugf("starting worker %d\n", id)
+		socketBase := socketRun(id)
 		os.MkdirAll(socketBase, 0700)
 		cmd := exec.Command("node", "-", "--", socketBase)
 		cmd.Stdin = strings.NewReader(MustAssetString("server.js"))
 		cmd.Stderr = os.Stderr
 		must(cmd.Run())
+		workers = append(workers, true)
+	}
+	go startWorker()
+	handle := func(c net.Conn) {
+		send(c, MessageInit{"init", 0})
 	}
 	fmt.Println(socketOrchestrator)
 	for {

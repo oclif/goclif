@@ -3,20 +3,22 @@ package main
 import (
 	"encoding/json"
 	"io"
-	"math/rand"
 	"net"
 	"time"
 )
 
 func connect(retry bool) net.Conn {
 	debugf("connecting")
-	c, err := net.DialTimeout("unix", socketOrchestrator, time.Second*5)
+	orchestrator, err := net.DialTimeout("unix", socketOrchestrator, time.Second*5)
 	if err != nil && retry {
 		forkDaemon()
 		return connect(false)
 	}
 	must(err)
-	send(c, MessageInit{"init", rand.Intn(100000)})
+	decoder := json.NewDecoder(orchestrator)
+	var init MessageInit
+	must(decoder.Decode(&init))
+	c, err := net.DialTimeout("unix", socketRun(init.ID), time.Second*5)
 	return c
 }
 
