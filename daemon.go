@@ -2,28 +2,43 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"os/exec"
+	User "os/user"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/erikdubbelboer/gspt"
 )
 
+func getUser() string {
+	user, err := User.Current()
+	must(err)
+	return user.Username
+}
+
 var (
-	socket = path.Join(os.TempDir(), "goclifd.sock")
+	user               = getUser()
+	socketBase         = path.Join(os.TempDir(), user, "goclifd.sock")
+	socketOrchestrator = path.Join(socketBase, "orchestrator")
 )
 
+func socketRun(id int) string {
+	return path.Join(socketBase, "run-"+strconv.Itoa(id))
+}
+
 func daemon() {
-	must(os.RemoveAll(socket))
-	gspt.SetProcTitle("goclifd")
 	debugf("started daemon\n")
-	s, err := net.Listen("unix", socket)
+	gspt.SetProcTitle("goclifd")
+	must(os.RemoveAll(socketBase))
+	os.MkdirAll(socketBase, 0700)
+	s, err := net.Listen("unix", socketOrchestrator)
 	must(err)
-	fmt.Println(socket)
 	connections := make(chan net.Conn, 1)
 	go func() {
 		for {
@@ -32,28 +47,31 @@ func daemon() {
 			connections <- c
 		}
 	}()
+	handle := func(c net.Conn) {
+		decoder := json.NewDecoder(c)
+		var init MessageInit
+		must(decoder.Decode(&init))
+		socketBase := socketRun(init.ID)
+		must(err)
+		debugf("socket: %s\n", socketBase)
+		os.MkdirAll(socketBase, 0700)
+		cmd := exec.Command("node", "-", "--", socketBase)
+		cmd.Stdin = strings.NewReader(MustAssetString("server.js"))
+		cmd.Stderr = os.Stderr
+		must(cmd.Run())
+	}
+	fmt.Println(socketOrchestrator)
 	for {
 		select {
-		case <-connections:
+		case c := <-connections:
 			debugf("daemon received connection")
+			go handle(c)
 		case <-time.After(time.Second * 5):
 			debugf("closing")
-			must(os.RemoveAll(socket))
+			must(os.RemoveAll(socketBase))
 			return
 		}
 	}
-	// cmd := exec.Command("node")
-	// cmd.Stdin = strings.NewReader(MustAssetString("server.js"))
-	// stdoutRaw, err := cmd.StdoutPipe()
-	// must(err)
-	// stdout := bufio.NewReader(stdoutRaw)
-	// cmd.Stderr = os.Stderr
-	// must(cmd.Start())
-	// socket, err := stdout.ReadString('\n')
-	// socket = strings.TrimSpace(socket)
-	// debugf("socket: %s\n", socket)
-	// must(err)
-	// return socket
 }
 
 func forkDaemon() string {

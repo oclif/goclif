@@ -1,10 +1,8 @@
 import * as heroku from 'heroku'
 import * as net from 'net'
-import * as os from 'os'
-import * as path from 'path'
 import {inspect} from 'util'
 
-const socket = path.join(os.tmpdir(), 'goclif.sock')
+const socket = process.argv[3]
 
 // sets up stdout/stderr which allow us to write the the real stdout
 // when running commands it will be mocked out
