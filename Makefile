@@ -23,11 +23,11 @@ $(PLATFORMS):
 .PHONY: release
 release: windows linux darwin
 
-server.js: server.ts
+worker.js: worker.ts
 	tsc
 
-bindata.go: server.js
-	go-bindata server.js
+bindata.go: worker.js
+	go-bindata worker.js
 
 dist/goclif: *.go
 	mkdir -p dist

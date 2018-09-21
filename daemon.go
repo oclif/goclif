@@ -62,7 +62,7 @@ func daemon() {
 		socketBase := socketRun(id, "")
 		os.MkdirAll(socketBase, 0700)
 		worker.Cmd = exec.Command("node", "-", "--", socketBase)
-		worker.Cmd.Stdin = strings.NewReader(MustAssetString("server.js"))
+		worker.Cmd.Stdin = strings.NewReader(MustAssetString("worker.js"))
 		worker.Cmd.Stderr = os.Stderr
 		readFirstLine(worker.Cmd)
 		worker.Working = false

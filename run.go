@@ -67,6 +67,14 @@ func run(argv []string) {
 	defer c.stderr.Close()
 
 	go io.Copy(c.stdin, os.Stdin)
+	// go func() {
+	// 	for {
+	// 		ascii, _, err := getChar()
+	// 		must(err)
+	// 		bytes := []byte{byte(ascii)}
+	// 		c.stdin.Write(bytes)
+	// 	}
+	// }()
 	go io.Copy(os.Stdout, c.stdout)
 	go io.Copy(os.Stderr, c.stderr)
 	decoder := json.NewDecoder(c.ctl)

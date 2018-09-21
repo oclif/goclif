@@ -73,19 +73,22 @@ Promise.all([openSocket('ctl'), openSocket('stdin'), openSocket('stdout'), openS
     }
     sockets.stdin.on('connection', socket => {
       debug('stdin socket connected')
-      socket.on('data', d => mockStdin.send(d))
+      socket.on('data', d => {
+        debug(`stdin: ${inspect(d.toString())}`)
+        mockStdin.send(d)
+      })
     })
     sockets.stdout.on('connection', socket => {
       debug('stdout socket connected')
       pipeStream(process.stdout, msg => {
-        debug(`stdout: ${msg}`)
+        debug(`stdout: ${inspect(msg.toString())}`)
         socket.write(msg)
       })
     })
     sockets.stderr.on('connection', socket => {
       debug('stderr socket connected')
       pipeStream(process.stderr, msg => {
-        debug(`stderr: ${msg}`)
+        debug(`stderr: ${inspect(msg.toString())}`)
         socket.write(msg)
       })
     })
