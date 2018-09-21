@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -27,8 +28,13 @@ var (
 	socketOrchestrator = path.Join(socketBase, "orchestrator")
 )
 
-func socketRun(id int) string {
-	return path.Join(socketBase, "run-"+strconv.Itoa(id))
+func socketRun(id int, stream string) string {
+	return path.Join(socketBase, strconv.Itoa(id), stream)
+}
+
+type worker struct {
+	ID      int
+	Working bool
 }
 
 func daemon() {
@@ -46,21 +52,40 @@ func daemon() {
 			connections <- c
 		}
 	}()
-	workers := []bool{}
-	startWorker := func() {
+	workers := []worker{}
+	startWorker := func() worker {
 		id := len(workers)
+		worker := worker{id, true}
+		workers = append(workers, worker)
 		debugf("starting worker %d\n", id)
-		socketBase := socketRun(id)
+		socketBase := socketRun(id, "")
 		os.MkdirAll(socketBase, 0700)
 		cmd := exec.Command("node", "-", "--", socketBase)
 		cmd.Stdin = strings.NewReader(MustAssetString("server.js"))
 		cmd.Stderr = os.Stderr
-		must(cmd.Run())
-		workers = append(workers, true)
+		must(cmd.Start())
+		worker.Working = false
+		return worker
 	}
-	go startWorker()
+	getWorker := func() worker {
+		for _, worker := range workers {
+			if !worker.Working {
+				return worker
+			}
+		}
+		return startWorker()
+	}
 	handle := func(c net.Conn) {
-		send(c, MessageInit{"init", 0})
+		decoder := json.NewDecoder(c)
+		var msg Message
+		decoder.Decode(&msg)
+		debugf("got: %#v\n", msg)
+		worker := getWorker()
+		msg.WorkerID = &worker.ID
+		worker.Working = true
+		send(c, msg)
+		// todo: wait for worker to stop
+		worker.Working = false
 	}
 	fmt.Println(socketOrchestrator)
 	for {

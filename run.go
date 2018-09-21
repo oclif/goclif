@@ -5,36 +5,65 @@ import (
 	"io"
 	"net"
 	"time"
+
+	"github.com/satori/go.uuid"
 )
 
-func connect(retry bool) net.Conn {
-	debugf("connecting")
-	orchestrator, err := net.DialTimeout("unix", socketOrchestrator, time.Second*5)
-	if err != nil && retry {
-		forkDaemon()
-		return connect(false)
-	}
-	must(err)
-	decoder := json.NewDecoder(orchestrator)
-	var init MessageInit
-	must(decoder.Decode(&init))
-	c, err := net.DialTimeout("unix", socketRun(init.ID), time.Second*5)
-	return c
+type connection struct {
+	stdin  net.Conn
+	stdout net.Conn
+	stderr net.Conn
 }
 
-func send(c io.Writer, msg interface{}) {
+func send(c net.Conn, msg interface{}) {
 	output, err := json.Marshal(msg)
 	debugf("sent: %s\n", string(output))
 	must(err)
 	c.Write(output)
 }
 
-func run(argv []string) {
-	c := connect(true)
-	debugf("connected")
-	defer c.Close()
+func getMessage(uuid string, c net.Conn) *Message {
+	var msg Message
+	decoder := json.NewDecoder(c)
+	must(decoder.Decode(&msg))
+	if msg.ID != uuid {
+		debugf("sending back msg %#v\n", msg)
+		// send it back
+		send(c, msg)
+		return getMessage(uuid, c)
+	}
+	debugf("got: %#v\n", msg)
+	return &msg
+}
 
-	read := func() {
+func connect(argv []string, retry bool) *connection {
+	debugf("connecting")
+	orchestrator, err := net.DialTimeout("unix", socketOrchestrator, time.Second*5)
+	if err != nil && retry {
+		forkDaemon()
+		return connect(argv, false)
+	}
+	must(err)
+	u := uuid.Must(uuid.NewV4()).String()
+	send(orchestrator, Message{u, nil, "command", argv})
+	msg := getMessage(u, orchestrator)
+	stdin, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "stdin"), time.Second*5)
+	must(err)
+	stdout, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "stdout"), time.Second*5)
+	must(err)
+	stderr, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "stderr"), time.Second*5)
+	must(err)
+	return &connection{stdin, stdout, stderr}
+}
+
+func run(argv []string) {
+	c := connect(argv, true)
+	debugf("connected")
+	defer c.stdin.Close()
+	defer c.stdout.Close()
+	defer c.stderr.Close()
+
+	read := func(c net.Conn) {
 		buf := make([]byte, 1024)
 		for {
 			n, err := c.Read(buf[:])
@@ -46,17 +75,6 @@ func run(argv []string) {
 		}
 	}
 
-	send := func(msg interface{}) {
-		output, err := json.Marshal(msg)
-		debugf("sent: %s\n", string(output))
-		must(err)
-		c.Write(output)
-	}
-
-	send(MessageCommand{
-		Type: "command",
-		Argv: argv,
-	})
-
-	read()
+	read(c.stdout)
+	read(c.stderr)
 }
