@@ -35,6 +35,7 @@ func socketRun(id int, stream string) string {
 type worker struct {
 	ID      int
 	Working bool
+	Cmd     *exec.Cmd
 }
 
 func daemon() {
@@ -52,23 +53,24 @@ func daemon() {
 			connections <- c
 		}
 	}()
-	workers := []worker{}
-	startWorker := func() worker {
+	workers := []*worker{}
+	startWorker := func() *worker {
 		id := len(workers)
-		worker := worker{id, true}
-		workers = append(workers, worker)
+		worker := worker{id, true, nil}
+		workers = append(workers, &worker)
 		debugf("starting worker %d\n", id)
 		socketBase := socketRun(id, "")
 		os.MkdirAll(socketBase, 0700)
-		cmd := exec.Command("node", "-", "--", socketBase)
-		cmd.Stdin = strings.NewReader(MustAssetString("server.js"))
-		cmd.Stderr = os.Stderr
-		readFirstLine(cmd)
+		worker.Cmd = exec.Command("node", "-", "--", socketBase)
+		worker.Cmd.Stdin = strings.NewReader(MustAssetString("server.js"))
+		worker.Cmd.Stderr = os.Stderr
+		readFirstLine(worker.Cmd)
 		worker.Working = false
-		return worker
+		return &worker
 	}
-	getWorker := func() worker {
+	getWorker := func() *worker {
 		for _, worker := range workers {
+			debugf("%#v\n", worker)
 			if !worker.Working {
 				return worker
 			}
@@ -88,7 +90,14 @@ func daemon() {
 		defer ctl.Close()
 		send(ctl, msg)
 		send(c, msg)
+		decoder = json.NewDecoder(ctl)
+		var exit struct {
+			Code int `json:"code"`
+		}
+		must(decoder.Decode(&exit))
+		send(c, exit)
 		worker.Working = false
+		debugf("worker done")
 	}
 	fmt.Println(socketOrchestrator)
 	for {
@@ -96,9 +105,12 @@ func daemon() {
 		case c := <-connections:
 			debugf("daemon received connection")
 			go handle(c)
-		case <-time.After(time.Second * 5):
+		case <-time.After(time.Second * 10):
 			debugf("closing")
 			must(os.RemoveAll(socketBase))
+			for _, worker := range workers {
+				worker.Cmd.Process.Kill()
+			}
 			return
 		}
 	}

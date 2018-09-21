@@ -16,7 +16,7 @@ const stdoutWrite = process.stdout.write
 const stderrWrite = process.stdout.write
 const stdout = (msg: string) => stdoutWrite.bind(process.stdout)(msg)
 const stderr = (msg: string) => stderrWrite.bind(process.stderr)(msg)
-const debug = (msg: string) => stderr('server ' + msg + '\n')
+const debug = (msg: string) => stderr('worker ' + msg + '\n')
 
 type Message = {
   id: string
@@ -53,10 +53,14 @@ Promise.all([openSocket('ctl'), openSocket('stdin'), openSocket('stdout'), openS
         process.exit(0)
       })
     }
-    setTimeout(() => {
-      debug('timed out')
-      for (let server of servers) server.close()
-    }, 5000)
+    let timeout: NodeJS.Timer
+    const resetTimeout = () => {
+      timeout = setTimeout(() => {
+        debug('timed out')
+        for (let server of servers) server.close()
+      }, 10000)
+    }
+    resetTimeout()
     const sockets = {
       ctl: servers[0],
       stdin: servers[1],
@@ -82,6 +86,7 @@ Promise.all([openSocket('ctl'), openSocket('stdin'), openSocket('stdout'), openS
     })
     let ctlSockets: net.Socket[] = []
     sockets.ctl.on('connection', socket => {
+      clearTimeout(timeout)
       ctlSockets.push(socket)
       socket.on('close', () => {
         ctlSockets = ctlSockets.filter(c => c !== socket)
@@ -113,6 +118,7 @@ Promise.all([openSocket('ctl'), openSocket('stdin'), openSocket('stdout'), openS
       for (let socket of ctlSockets) {
         send(socket, JSON.stringify({code}))
       }
+      resetTimeout()
     }
     stdout('up\n')
   })

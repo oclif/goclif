@@ -49,15 +49,13 @@ func connect(argv []string, retry bool) *connection {
 	u := uuid.Must(uuid.NewV4()).String()
 	send(orchestrator, Message{u, nil, "command", argv})
 	msg := getMessage(u, orchestrator)
-	ctl, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "ctl"), time.Second*5)
-	must(err)
 	stdin, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "stdin"), time.Second*5)
 	must(err)
 	stdout, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "stdout"), time.Second*5)
 	must(err)
 	stderr, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "stderr"), time.Second*5)
 	must(err)
-	return &connection{ctl, stdin, stdout, stderr}
+	return &connection{orchestrator, stdin, stdout, stderr}
 }
 
 func run(argv []string) {
