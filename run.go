@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -71,6 +72,9 @@ func run(argv []string) {
 		for {
 			n, err := c.Read(buf[:])
 			if err != nil {
+				if err == io.EOF {
+					return
+				}
 				if strings.HasSuffix(err.Error(), "use of closed network connection") {
 					return
 				}

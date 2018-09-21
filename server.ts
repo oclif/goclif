@@ -10,6 +10,8 @@ const sockets = {
   stderr: path.join(process.argv[3], 'stderr'),
 }
 
+const realExit = process.exit
+
 // sets up stdout/stderr which allow us to write the the real stdout
 // when running commands it will be mocked out
 const stdoutWrite = process.stdout.write
@@ -98,6 +100,7 @@ Promise.all([openSocket('ctl'), openSocket('stdin'), openSocket('stdout'), openS
           debug('closing socket\n')
           socket.end()
         }
+        (process.exit as any) = exit
         heroku
           .run(message.argv)
           .then(() => {
@@ -108,7 +111,8 @@ Promise.all([openSocket('ctl'), openSocket('stdin'), openSocket('stdout'), openS
               exit(err.oclif.exit)
               end()
             } else {
-              stderr(err.message)
+              process.stderr.write(err.stack)
+              exit(1)
             }
           })
       })
@@ -119,6 +123,7 @@ Promise.all([openSocket('ctl'), openSocket('stdin'), openSocket('stdout'), openS
         send(socket, JSON.stringify({code}))
       }
       resetTimeout()
+      process.exit = realExit
     }
     stdout('up\n')
   })
