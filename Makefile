@@ -35,4 +35,5 @@ dist/goclif: *.go
 
 .PHONY: run
 run: build
-	DEBUG=1 ./dist/goclif $(ARGS)
+	# DEBUG=1 ./dist/goclif $(ARGS)
+	./dist/goclif $(ARGS)

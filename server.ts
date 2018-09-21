@@ -16,7 +16,7 @@ const stdoutWrite = process.stdout.write
 const stderrWrite = process.stdout.write
 const stdout = (msg: string) => stdoutWrite.bind(process.stdout)(msg)
 const stderr = (msg: string) => stderrWrite.bind(process.stderr)(msg)
-const debug = (msg: string) => stderr('worker ' + msg + '\n')
+const debug = (msg: string) => process.env.DEBUG ? stderr('worker ' + msg + '\n') : null
 
 type Message = {
   id: string
