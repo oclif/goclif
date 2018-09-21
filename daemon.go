@@ -63,7 +63,7 @@ func daemon() {
 		cmd := exec.Command("node", "-", "--", socketBase)
 		cmd.Stdin = strings.NewReader(MustAssetString("server.js"))
 		cmd.Stderr = os.Stderr
-		must(cmd.Start())
+		readFirstLine(cmd)
 		worker.Working = false
 		return worker
 	}
@@ -78,13 +78,16 @@ func daemon() {
 	handle := func(c net.Conn) {
 		decoder := json.NewDecoder(c)
 		var msg Message
-		decoder.Decode(&msg)
+		must(decoder.Decode(&msg))
 		debugf("got: %#v\n", msg)
 		worker := getWorker()
 		msg.WorkerID = &worker.ID
 		worker.Working = true
+		ctl, err := net.DialTimeout("unix", socketRun(worker.ID, "ctl"), time.Second*5)
+		must(err)
+		defer ctl.Close()
+		send(ctl, msg)
 		send(c, msg)
-		// todo: wait for worker to stop
 		worker.Working = false
 	}
 	fmt.Println(socketOrchestrator)
@@ -101,17 +104,18 @@ func daemon() {
 	}
 }
 
+func readFirstLine(cmd *exec.Cmd) string {
+	stdoutRaw, err := cmd.StdoutPipe()
+	must(err)
+	stdout := bufio.NewReader(stdoutRaw)
+	must(cmd.Start())
+	s, err := stdout.ReadString('\n')
+	must(err)
+	return strings.TrimSpace(s)
+}
+
 func forkDaemon() string {
 	debugf("starting daemon\n")
-	readFirstLine := func(cmd *exec.Cmd) string {
-		stdoutRaw, err := cmd.StdoutPipe()
-		must(err)
-		stdout := bufio.NewReader(stdoutRaw)
-		must(cmd.Start())
-		s, err := stdout.ReadString('\n')
-		must(err)
-		return strings.TrimSpace(s)
-	}
 	cmd := exec.Command("./dist/goclif", "__goclifd")
 	cmd.Stderr = os.Stderr
 	return readFirstLine(cmd)

@@ -24,7 +24,7 @@ $(PLATFORMS):
 release: windows linux darwin
 
 server.js: server.ts
-	tsc server.ts
+	tsc
 
 bindata.go: server.js
 	go-bindata server.js

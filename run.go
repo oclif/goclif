@@ -2,14 +2,16 @@ package main
 
 import (
 	"encoding/json"
-	"io"
 	"net"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/satori/go.uuid"
 )
 
 type connection struct {
+	ctl    net.Conn
 	stdin  net.Conn
 	stdout net.Conn
 	stderr net.Conn
@@ -47,34 +49,55 @@ func connect(argv []string, retry bool) *connection {
 	u := uuid.Must(uuid.NewV4()).String()
 	send(orchestrator, Message{u, nil, "command", argv})
 	msg := getMessage(u, orchestrator)
+	ctl, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "ctl"), time.Second*5)
+	must(err)
 	stdin, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "stdin"), time.Second*5)
 	must(err)
 	stdout, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "stdout"), time.Second*5)
 	must(err)
 	stderr, err := net.DialTimeout("unix", socketRun(*msg.WorkerID, "stderr"), time.Second*5)
 	must(err)
-	return &connection{stdin, stdout, stderr}
+	return &connection{ctl, stdin, stdout, stderr}
 }
 
 func run(argv []string) {
 	c := connect(argv, true)
 	debugf("connected")
+	defer c.ctl.Close()
 	defer c.stdin.Close()
 	defer c.stdout.Close()
 	defer c.stderr.Close()
 
-	read := func(c net.Conn) {
+	read := func(stream string, c net.Conn) {
 		buf := make([]byte, 1024)
 		for {
 			n, err := c.Read(buf[:])
-			if err == io.EOF {
-				return
+			if err != nil {
+				if strings.HasSuffix(err.Error(), "use of closed network connection") {
+					return
+				}
+				panic(err)
 			}
-			must(err)
 			debugf("got: %#v\n", string(buf[0:n]))
+			switch stream {
+			case "stdout":
+				os.Stdout.Write(buf)
+			case "stderr":
+				os.Stderr.Write(buf)
+			}
 		}
 	}
 
-	read(c.stdout)
-	read(c.stderr)
+	go read("stdout", c.stdout)
+	go read("stderr", c.stderr)
+	decoder := json.NewDecoder(c.ctl)
+	var exit struct {
+		Code int `json:"code"`
+	}
+	must(decoder.Decode(&exit))
+	c.ctl.Close()
+	c.stdin.Close()
+	c.stdout.Close()
+	c.stderr.Close()
+	os.Exit(exit.Code)
 }
