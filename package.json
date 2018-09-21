@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "@types/node": "^10.10.1",
-    "heroku": "^7.16.0"
+    "heroku": "^7.16.0",
+    "mock-stdin": "^0.3.1"
   },
   "devDependencies": {
     "@oclif/tslint": "^3.1.0",

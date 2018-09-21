@@ -3,6 +3,8 @@ import * as net from 'net'
 import * as path from 'path'
 import {inspect} from 'util'
 
+const mockStdin = require('mock-stdin').stdin()
+
 const sockets = {
   ctl: path.join(process.argv[3], 'ctl'),
   stdin: path.join(process.argv[3], 'stdin'),
@@ -69,8 +71,9 @@ Promise.all([openSocket('ctl'), openSocket('stdin'), openSocket('stdout'), openS
       stdout: servers[2],
       stderr: servers[3],
     }
-    sockets.stdin.on('connection', _ => {
+    sockets.stdin.on('connection', socket => {
       debug('stdin socket connected')
+      socket.on('data', d => mockStdin.send(d))
     })
     sockets.stdout.on('connection', socket => {
       debug('stdout socket connected')

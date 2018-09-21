@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/satori/go.uuid"
@@ -67,31 +66,9 @@ func run(argv []string) {
 	defer c.stdout.Close()
 	defer c.stderr.Close()
 
-	read := func(stream string, c net.Conn) {
-		buf := make([]byte, 1024)
-		for {
-			n, err := c.Read(buf[:])
-			if err != nil {
-				if err == io.EOF {
-					return
-				}
-				if strings.HasSuffix(err.Error(), "use of closed network connection") {
-					return
-				}
-				panic(err)
-			}
-			debugf("got: %#v\n", string(buf[0:n]))
-			switch stream {
-			case "stdout":
-				os.Stdout.Write(buf)
-			case "stderr":
-				os.Stderr.Write(buf)
-			}
-		}
-	}
-
-	go read("stdout", c.stdout)
-	go read("stderr", c.stderr)
+	go io.Copy(c.stdin, os.Stdin)
+	go io.Copy(os.Stdout, c.stdout)
+	go io.Copy(os.Stderr, c.stderr)
 	decoder := json.NewDecoder(c.ctl)
 	var exit struct {
 		Code int `json:"code"`
